@@ -1,0 +1,21 @@
+---
+applications:
+  - name: eagle-eye
+    memory: 128M
+    timeout: 180
+    buildpack: nodejs_buildpack
+    command: node server/app.js
+    path: build/es5-basic
+services:
+ - predix-uaa
+env:
+    node_env: cloud
+    uaa_service_label : predix-uaa
+    # Add these values for authentication in the cloud
+    base64ClientCredential: YXBwX2NsaWVudF9pZDpzZnN1QDIwMTg=
+    loginBase64ClientCredential: bG9naW5fY2xpZW50X2lkOnNmc3VAMjAxOA==
+    # Use a full wss:// URL for actual web socket server. use /livestream for mock data.
+    websocketServerURL: /livestream
+    #rmdDatasourceURL: {URL of your RMD datasource microservice}
+    rmdDocsURL: "https://raw.githubusercontent.com/PredixDev/predix-rmd-ref-app/master/README.md"
+    #dataExchangeURL: {URL of your data exchange microservice}

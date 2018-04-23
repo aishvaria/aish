@@ -1,0 +1,614 @@
+<!-- import polymer -->
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+
+<!-- import page level css -->
+<link rel="import" href="seed-app-styles.html">
+
+<!-- app route -->
+<link rel="import" href="../../bower_components/app-route/app-location.html">
+<link rel="import" href="../../bower_components/px-app-helpers/px-app-route/px-app-route.html">
+<!-- px components -->
+<link rel="import" href="../../bower_components/px-app-nav/px-app-nav.html">
+<link rel="import" href="../../bower_components/px-view/px-view.html">
+<link rel="import" href="../../bower_components/px-login/px-login.html">
+<link rel="import" href="../../bower_components/px-branding-bar/px-branding-bar.html">
+<!-- google components -->
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+
+<!-- importing icons here, to fix icon flickering problem when loading asynchronously. -->
+<link rel="import" href="../../bower_components/px-icon-set/px-icon.html">
+<link rel="import" href="../../bower_components/px-icon-set/px-icon-set.html">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<dom-module id="seed-app">
+  <template>
+
+    <!-- apply imported seed app style module -->
+    <style include="seed-app-styles"></style>
+
+    <px-branding-bar application-title="GE HACKATHON SFSU 2018"></px-branding-bar>
+
+    <div class="viewport">
+      <app-location
+        route="{{route}}"
+        use-hash-as-path>
+      </app-location>
+      <px-app-route
+        id="starterAppRoute"
+        route="{{route}}"
+        use-hash-as-path
+        update-nav-route
+        nav-route="{{navRoute}}">
+      </px-app-route>
+<!--this id for city Monitoring and about-->
+<div class="flex flex--row flex--justify">
+    <div class="u-3/4-desk u-1/1-palm">
+      <px-app-nav
+        class="navbar"
+        items="{{navItems}}"
+        selected-route="{{navRoute}}">
+      </px-app-nav>
+    </div>
+    <div class="u-1/1-palm">
+      <div class="flex flex--row flex--right">
+        <px-login class="u-pr u-pt"></px-login>
+      </div>
+    </div>
+  </div>
+
+  <style>
+      body{
+          font-family:"Lato", sans-serif;
+      }
+
+      #main {
+          transition: margin-left .5s;
+          padding: 16px;
+      }
+
+      @media screen and (max-height: 450px) {
+          .sidenav {padding-top: 15px;}
+          .sidenav a {font-size: 18px;}
+      }
+  </style>
+  <style>
+      #map{
+        position:absolute;
+                      width: 84%;
+                      height: 90%;
+                      right:0%;
+      }
+      html, body {
+          height:100%;
+          margin:0;
+          padding:0;
+      }
+      #floating-panel {
+          position: absolute;
+          top: 10px;
+          left: 25%;
+          z-index: 5;
+          background-color: #fff;
+          padding: 5px;
+          border: 1px solid #999;
+          text-align: center;
+          font-family: 'Roboto','sans-serif';
+          line-height: 30px;
+          padding-left: 10px;
+      }
+      #floating-options {
+        background-color:  #000e1a  ;
+                      border:1px solid #999;
+                      left: 25%;
+                      padding: 10px;
+                      position:static;
+                      top: 10px;
+                      z-index: 5;
+      }
+      .button {
+  display: inline-block;
+  border-radius: 4px;
+  background-color: #004e68;
+  border: none;
+  color: #FFFFFF;
+  text-align: center;
+  font-size: 18px;
+  padding:30px;
+  width: 200px;
+  transition: all 0.5s;
+  cursor: pointer;
+  margin: 5px;
+}
+
+.button span {
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  transition: 0.5s;
+}
+
+.button span:after {
+  content: '\00bb';
+  position: absolute;
+  opacity: 0;
+  top: 0;
+  right: -20px;
+  transition: 0.5s;
+}
+
+.button:hover span {
+  padding-right: 25px;
+}
+
+.button:hover span:after {
+  opacity: 1;
+  right: 0;
+}
+  </style>
+</head>
+
+<body>
+
+
+  <div id="map"></div>
+  <div id="floating-options">
+                  <br>
+                  <br>
+                    <button class="button" style="vertical-align:middle"><span onclick="showPedmap()">Pedestrian Location ON</button>
+                      <br>
+                      <br>
+                      <br>
+                      <button class="button" style="vertical-align:middle"><span onclick="hidePedmap()">Pedestrian Location OFF</button>
+                        <br>
+                        <br>
+                        <br>
+                        <button class="button" style="vertical-align:middle"><span onclick="showGunshot()">GunshotLocation ON</button>
+                          <br>
+                          <br>
+                          <br>
+
+                            <button class="button" style="vertical-align:middle" <span onclick="hideGunshot()">GunshotLocation OFF</button>
+                              <br>
+                              <br>
+                              <br>
+                              <button class="button" style="vertical-align:middle"><span onclick="toggleHeatmap()">Pedestrain Heatmap</button>
+                                <br>
+                                <br>
+                                <br>
+                                <br>
+
+
+  </div>
+
+  <script>
+      var map;
+      var id;
+      var markers1 = [];
+      var markers2 = [];
+      var uniqueId = 1;
+      var startMap = {lat: 32.7157, lng: -117.1611};
+      function addYourLocationButton(map, marker) {
+          var controlDiv = document.createElement('div');
+          var firstChild = document.createElement('button');
+          firstChild.style.backgroundColor = '#fff';
+          firstChild.style.border = 'none';
+          firstChild.style.outline = 'none';
+          firstChild.style.width = '28px';
+          firstChild.style.height = '28px';
+          firstChild.style.borderRadius = '2px';
+          firstChild.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)';
+          firstChild.style.cursor = 'pointer';
+          firstChild.style.marginRight = '10px';
+          firstChild.style.padding = '0px';
+          firstChild.title = 'Your Location';
+          controlDiv.appendChild(firstChild);
+          var secondChild = document.createElement('div');
+          secondChild.style.margin = '5px';
+          secondChild.style.width = '18px';
+          secondChild.style.height = '18px';
+          secondChild.style.backgroundImage = 'url(https://maps.gstatic.com/tactile/mylocation/mylocation-sprite-1x.png)';
+          secondChild.style.backgroundSize = '180px 18px';
+          secondChild.style.backgroundPosition = '0px 0px';
+          secondChild.style.backgroundRepeat = 'no-repeat;'
+          secondChild.id = 'you_location_img';
+          firstChild.appendChild(secondChild);
+          google.maps.event.addListener(map, 'dragend', function () {
+              $('#you_location_img').css('background-position', '0px 0px');
+          });
+          firstChild.addEventListener('click', function () {
+              var imgX = '0';
+              var animationInterval = setInterval(function () {
+                  if (imgX == '-18')
+                      imgX = '0';
+                  else
+                      imgX = '-18';
+                  $('#you_location_img').css('background-position', imgX + 'px 0px');
+              }, 500);
+              if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(function (position) {
+                      var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                      marker.setPosition(latlng);
+                      map.setCenter(latlng);
+                      clearInterval(animationInterval);
+                      $('#you_location_img').css('background-position', '-144px 0px');
+                  });
+              } else {
+                  clearInterval(animationInterval);
+                  $('#you_location_img').css('background-position', '0px 0px');
+              }
+          });
+          controlDiv.index = 1;
+          map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(controlDiv);
+      }
+
+      function initMap() {
+          map = new google.maps.Map(document.getElementById('map'), {
+              zoom: 13,
+              center: startMap,
+              styles: [
+                  {elementType: 'geometry', stylers: [{color: '#242f3e'}]},
+                  {elementType: 'labels.text.stroke', stylers: [{color: '#242f3e'}]},
+                  {elementType: 'labels.text.fill', stylers: [{color: '#746855'}]},
+                  {
+                      featureType: 'administrative.locality',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#d59563'}]
+                  },
+                  {
+                      featureType: 'poi',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#d59563'}]
+                  },
+                  {
+                      featureType: 'poi.park',
+                      elementType: 'geometry',
+                      stylers: [{color: '#263c3f'}]
+                  },
+                  {
+                      featureType: 'poi.park',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#6b9a76'}]
+                  },
+                  {
+                      featureType: 'road',
+                      elementType: 'geometry',
+                      stylers: [{color: '#38414e'}]
+                  },
+                  {
+                      featureType: 'road',
+                      elementType: 'geometry.stroke',
+                      stylers: [{color: '#212a37'}]
+                  },
+                  {
+                      featureType: 'road',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#9ca5b3'}]
+                  },
+                  {
+                      featureType: 'road.highway',
+                      elementType: 'geometry',
+                      stylers: [{color: '#746855'}]
+                  },
+                  {
+                      featureType: 'road.highway',
+                      elementType: 'geometry.stroke',
+                      stylers: [{color: '#1f2835'}]
+                  },
+                  {
+                      featureType: 'road.highway',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#f3d19c'}]
+                  },
+                  {
+                      featureType: 'transit',
+                      elementType: 'geometry',
+                      stylers: [{color: '#2f3948'}]
+                  },
+                  {
+                      featureType: 'transit.station',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#d59563'}]
+                  },
+                  {
+                      featureType: 'water',
+                      elementType: 'geometry',
+                      stylers: [{color: '#17263c'}]
+                  },
+                  {
+                      featureType: 'water',
+                      elementType: 'labels.text.fill',
+                      stylers: [{color: '#515c6d'}]
+                  },
+                  {
+                      featureType: 'water',
+                      elementType: 'labels.text.stroke',
+                      stylers: [{color: '#17263c'}]
+                  }
+              ]
+          });
+
+          var myMarker = new google.maps.Marker({
+              map: map,
+              animation: google.maps.Animation.DROP,
+              position: map
+          });
+
+          addYourLocationButton(map, myMarker);
+
+          heatmapP = new google.maps.visualization.HeatmapLayer({
+              data: getPointsP(),
+              map: map
+          });
+
+          var southWest = new google.maps.LatLng(32.672318, -117.241110);
+          var northEast = new google.maps.LatLng(33.066844, -117.062118);
+          var southWest1 = new google.maps.LatLng(32.851369, -117.274978);
+          var northEast1 = new google.maps.LatLng(32.813290, -117.010619);
+          var southWest2 = new google.maps.LatLng(32.668324, -117.047011);
+          var northEast2 = new google.maps.LatLng(32.984519, -117.244765);
+          var southWest3 = new google.maps.LatLng(32.939582, -116.987960);
+          var northEast3 = new google.maps.LatLng(32.717442, -117.257125);
+          var lngSpan = northEast.lng() - southWest.lng();
+          var lngSpan = northEast.lng() - southWest.lng();
+          var latSpan = northEast.lat() - southWest.lat();
+          var lngSpan1 = northEast1.lng() - southWest1.lng();
+          var lngSpan1 = northEast1.lng() - southWest1.lng();
+          var latSpan1 = northEast1.lat() - southWest1.lat();
+          var lngSpan2 = northEast2.lng() - southWest2.lng();
+          var lngSpan2 = northEast2.lng() - southWest2.lng();
+          var latSpan2 = northEast2.lat() - southWest2.lat();
+          var lngSpan3 = northEast3.lng() - southWest3.lng();
+          var lngSpan3 = northEast3.lng() - southWest3.lng();
+          var latSpan3 = northEast3.lat() - southWest3.lat();
+
+          // Create some markers
+          var pedestrian = {
+              url: 'http://maps.google.com/mapfiles/kml/shapes/man.png',
+              scaledSize: new google.maps.Size(30, 30) // scaled size
+
+          };
+
+
+
+          var gun = {
+              url: 'http://maps.google.com/mapfiles/kml/shapes/caution.png',
+              scaledSize: new google.maps.Size(25, 25) // scaled size
+
+          };
+
+          for (var i = 1; i <= 500; i++) {
+              var location = new google.maps.LatLng(southWest.lat() + latSpan * Math.random(), southWest.lng() + lngSpan * Math.random());
+              var location2 = new google.maps.LatLng(southWest2.lat() + latSpan2 * Math.random(), southWest2.lng() + lngSpan2 * Math.random());
+
+              var marker = new google.maps.Marker({
+                  position: location,
+                  position: location2,
+                  icon: pedestrian,
+                  map: map
+              });
+              markers1.push(marker);
+
+          }
+
+          for (i = 1; i <= 25; i++) {
+              var location1 = new google.maps.LatLng(southWest1.lat() + latSpan1 * Math.random(), southWest1.lng() + lngSpan1 * Math.random());
+              var location3 = new google.maps.LatLng(southWest3.lat() + latSpan3 * Math.random(), southWest3.lng() + lngSpan3 * Math.random());
+
+              var marker2 = new google.maps.Marker({
+                  position: location1,
+                  position: location3,
+                  icon: gun,
+                  map: map
+              });
+              markers2.push(marker2);
+          }
+      }
+
+      function toggleHeatmap() {
+          heatmapP.setMap(heatmapP.getMap() ? null : map);
+      }
+
+      function setMapOnAllP(map) {
+          for (var i = 0; i < markers1.length; i++) {
+              markers1[i].setMap(map);
+          }
+      }
+      function hidePedmap() {
+          setMapOnAllP(null);
+      }
+      function showPedmap() {
+          setMapOnAllP(map);
+      }
+      function setMapOnAllG(map) {
+          for (var i = 0; i < markers2.length; i++) {
+              markers2[i].setMap(map);
+          }
+      }
+      function hideGunshot() {
+          setMapOnAllG(null);
+      }
+      function showGunshot() {
+          setMapOnAllG(map);
+      }
+//           var delMarker = function (id) {
+//            markers1 = markerss1[id];
+//            markers1.setMap(null);
+//            }
+
+      function getPointsP() {
+          var southWest = new google.maps.LatLng(32.672318, -117.241110);
+          var northEast = new google.maps.LatLng(33.066844, -117.062118);
+          var southWest1 = new google.maps.LatLng(32.851369, -117.274978);
+          var northEast1 = new google.maps.LatLng(32.813290, -117.010619);
+          var southWest2 = new google.maps.LatLng(32.668324, -117.047011);
+          var northEast2 = new google.maps.LatLng(32.984519, -117.244765);
+          var southWest3 = new google.maps.LatLng(32.939582, -116.987960);
+          var northEast3 = new google.maps.LatLng(32.717442, -117.257125);
+          var lngSpan = northEast.lng() - southWest.lng();
+          var lngSpan = northEast.lng() - southWest.lng();
+          var latSpan = northEast.lat() - southWest.lat();
+          var lngSpan1 = northEast1.lng() - southWest1.lng();
+          var lngSpan1 = northEast1.lng() - southWest1.lng();
+          var latSpan1 = northEast1.lat() - southWest1.lat();
+          var lngSpan2 = northEast2.lng() - southWest2.lng();
+          var lngSpan2 = northEast2.lng() - southWest2.lng();
+          var latSpan2 = northEast2.lat() - southWest2.lat();
+          var lngSpan3 = northEast3.lng() - southWest3.lng();
+          var lngSpan3 = northEast3.lng() - southWest3.lng();
+          var latSpan3 = northEast3.lat() - southWest3.lat();
+
+          var lotsOfMarkers = [];
+
+          for (var i = 1; i <= 100; i++) {
+
+              var location = new google.maps.LatLng(southWest.lat() + latSpan * Math.random(), southWest.lng() + lngSpan * Math.random());
+              lotsOfMarkers.push(location);
+
+          }
+
+          for (i = 1; i <= 100; i++) {
+
+              var location2 = new google.maps.LatLng(southWest2.lat() + latSpan2 * Math.random(), southWest2.lng() + lngSpan2 * Math.random());
+              lotsOfMarkers.push(location2);
+          }
+
+          for (i = 1; i <= 10; i++) {
+
+              var location1 = new google.maps.LatLng(southWest1.lat() + latSpan1 * Math.random(), southWest1.lng() + lngSpan1 * Math.random());
+              lotsOfMarkers.push(location1);
+          }
+
+          for (i = 1; i <= 10; i++) {
+
+              var location3 = new google.maps.LatLng(southWest3.lat() + latSpan3 * Math.random(), southWest3.lng() + lngSpan3 * Math.random());
+              lotsOfMarkers.push(location3);
+          }
+          return lotsOfMarkers;
+      }
+
+
+
+  </script>
+
+  <script>
+      function openNav() {
+          navSize = document.getElementById("mySidenav").style.width;
+          if (navSize === "250px") {
+              return closeNav();
+          } else {
+              document.getElementById("mySidenav").style.width = "250px";
+              document.getElementById("main").style.marginLeft = "250px";
+          }
+      }
+
+      function closeNav() {
+          document.getElementById("mySidenav").style.width = "0";
+          document.getElementById("main").style.marginLeft = "0";
+      }
+  </script>
+
+
+  <script async defer
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyApOnakGtWTlW9gyZVoN4ubE-81eBtP2P8&libraries=visualization&callback=initMap">
+  </script>
+
+
+</body>
+
+
+
+
+      </div>
+
+    </div>
+
+    <iron-ajax id="configAjaxEl" url="/config" auto></iron-ajax>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'seed-app',
+
+      properties: {
+
+        appHeader: {
+          type: String
+        },
+
+        //Global application object
+        global: {
+          type: Object,
+          value: function() {
+            return {
+              version: '1.0',
+              name: 'SFSU HACKATHON 2018 App'
+            }
+          }
+        },
+
+        // Links to appear in the main navigation - px-app-nav component
+        // See https://www.predix-ui.com/#/elements/px-icon-set for available icons
+        navItems: {
+          type: Array,
+          value: function() {
+            return [
+              {
+                "label": "Theia : An event monitoring app",
+                "id": "rmd",
+                "icon": "px-fea:analytics",
+
+              },
+              {
+                "label": "Pedestrain Gathering",
+                "id": "rmd",
+                "icon": "px-fea:dashboard",
+
+              },
+              {
+                "label": "Gun Detection",
+                "id": "rmd",
+                "icon": "px-fea:dashboard",
+
+              }
+              //Uncomment this block to show the Simple Asset navigation item on the menu.
+              /* // asset-nav-item
+              ,{
+                "label": "Simple Asset",
+                "id": "simple-asset",
+                "icon": "px-fea:asset"
+              }
+              // end asset-nav-item */
+            ]
+          }
+        },
+
+        navRoute: {
+          type: Array,
+        }
+      },
+
+      ready: function(){
+        if (!this.$.starterAppRoute.navRoute) {
+          // set default route
+          this.$.starterAppRoute.navRoute = ['rmd'];
+        }
+        // console.log('ready. route: ', this.$.starterAppRoute.navRoute);
+        this.$.configAjaxEl.addEventListener('response', function(evt) {
+          // We're getting some global config from the server.
+          // console.log('config', evt.detail.response);
+          this.appHeader = evt.detail.response.appHeader;
+          this.$.view.elementData = evt.detail.response;
+        }.bind(this));
+      },
+
+      getHref: function(navRoute) {
+        var navRoute = this.$.starterAppRoute.navRoute || ['rmd'];
+        return '/elements/views/' + navRoute[0] + '-view.html';
+      }
+
+    });
+
+
+  </script>
+
+</dom-module>
